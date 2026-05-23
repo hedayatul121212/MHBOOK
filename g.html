@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MHBOOK - Ultimate Social & Video Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link class="ui-styles" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+    <style id="injected-custom-css">
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        .msg-bubble { transition: transform 0.15s ease-out; user-select: none; }
+        .pulse-bg { animation: pulseEffect 1.5s infinite; }
+        @keyframes pulseEffect {
+            0 { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .story-ring { background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-zinc-900 text-gray-900 dark:text-zinc-100 font-sans transition-colors duration-200">
+
+    <div id="auth-screen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 to-indigo-600 p-4">
+        <div class="bg-white dark:bg-zinc-800 p-8 rounded-2xl shadow-2xl w-full max-w-md transition-all">
+            <div class="text-center mb-6">
+                <h1 class="text-4xl font-extrabold text-blue-600 dark:text-blue-400 tracking-wide mb-2">MHBOOK</h1>
+                <p class="text-gray-500 dark:text-zinc-400 text-sm">Connect, Share, and Watch Videos</p>
+            </div>
+            
+            <div id="login-form">
+                <div class="space-y-4">
+                    <input type="text" id="login-username" placeholder="Username" class="w-full px-4 py-3 border border-gray-300 dark:border-zinc-700 rounded-xl bg-gray-50 dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white">
+                    <input type="password" id="login-password" placeholder="Password" class="w-full px-4 py-3 border border-gray-300 dark:border-zinc-700 rounded-xl bg-gray-50 dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white">
+                    <button onclick="handleLogin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition shadow-lg">Log In</button>
+                </div>
+                <p class="text-center mt-6 text-sm text-gray-600 dark:text-zinc-400">Don't have an account? <span onclick="showAuthScreen('register')" class="text-blue-500 hover:underline cursor-pointer font-semibold">Register here</span></p>
+            </div>
+
+            <div id="register-form" class="hidden">
+                <div class="space-y-3 max-h-[60vh] overflow-y-auto pr-1 scrollbar-hide">
+                    <input type="text" id="reg-name" placeholder="Full Name" class="w-full px-4 py-2.5 border border-gray-300 dark:border-zinc-700 rounded-xl bg-gray-50 dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white">
+                    <input type="text" id="reg-username" placeholder="Choose Username" class="w-full px-4 py-2.5 border border-gray-300 dark:border-zinc-700 rounded-xl bg-gray-50 dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white">
+                    <input type="text" id="reg-contact" placeholder="Gmail or Phone Number" class="w-full px-4 py-2.5 border border-gray-300 dark:border-zinc-700 rounded-xl bg-gray-50 dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white">
+                    <input type="text" id="reg-country" placeholder="Country" class="w-full px-4 py-2.5 border border-gray-300 dark:border-zinc-700 rounded-xl bg-gray-50 dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white">
+                    <input type="text" id="reg-city" placeholder="City" class="w-full px-4 py-2.5 border border-gray-300 dark:border-zinc-700 rounded-xl bg-gray-50 dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white">
+                    <input type="password" id="reg-password" placeholder="Password" class="w-full px-4 py-2.5 border border-gray-300 dark:border-zinc-700 rounded-xl bg-gray-50 dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white">
+                    <button onclick="handleRegister()" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition shadow-lg mt-2">Create Account</button>
+                </div>
+                <p class="text-center mt-4 text-sm text-gray-600 dark:text-zinc-400">Already have an account? <span onclick="showAuthScreen('login')" class="text-blue-500 hover:underline cursor-pointer font-semibold">Log In</span></p>
+            </div>
+        </div>
+    </div>
+
+    <div id="main-app" class="hidden min-h-screen flex flex-col pb-16 md:pb-0">
+        <header class="bg-white dark:bg-zinc-800 shadow-sm sticky top-0 z-40 px-4 py-3 flex items-center justify-between border-b border-gray-200 dark:border-zinc-700">
+            <div class="flex items-center gap-3">
+                <h1 class="text-2xl font-black text-blue-600 dark:text-blue-400 tracking-wider">MHBOOK</h1>
+                <div class="relative hidden sm:block">
+                    <input type="text" id="search-input" placeholder="Search MHBOOK..." class="bg-gray-100 dark:bg-zinc-900 pl-9 pr-4 py-1.5 text-sm rounded-full w-60 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <i class="fa-solid fa-magnifying-glass text-gray-400 absolute left-3 top-2.5 text-xs"></i>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <button onclick="toggleDarkMode()" class="w-9 h-9 flex items-center justify-center bg-gray-100 dark:bg-zinc-900 rounded-full hover:bg-gray-200 dark:hover:bg-zinc-700 transition">
+                    <i id="dark-icon" class="fa-solid fa-moon text-gray-700"></i>
+                </button>
+                <div onclick="switchTab('profile')" class="flex items-center gap-2 cursor-pointer bg-gray-100 dark:bg-zinc-900 py-1.5 px-3 rounded-full hover:bg-gray-200 dark:hover:bg-zinc-700 transition">
+                    <div class="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold text-sm" id="nav-avatar">U</div>
+                    <span class="text-sm font-semibold max-w-[80px] truncate hidden md:inline" id="nav-username">User</span>
+                </div>
+                <button onclick="handleLogout()" class="text-gray-500 hover:text-red-500 text-lg" title="Logout">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </button>
+            </div>
+        </header>
+
+        <div class="flex-1 flex max-w-6xl w-full mx-auto md:px-4 gap-6">
+            <aside class="w-64 hidden md:flex flex-col gap-1 py-6 sticky top-16 h-[calc(100vh-64px)] overflow-y-auto">
+                <button id="home-side-btn" onclick="switchTab('home')" class="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-gray-200 dark:hover:bg-zinc-800 transition text-left font-semibold">
+                    <i class="fa-solid fa-house text-blue-500 text-xl w-6"></i> Home Feed
+                </button>
+                <button id="friends-side-btn" onclick="switchTab('friends')" class="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-gray-200 dark:hover:bg-zinc-800 transition text-left font-semibold">
+                    <i class="fa-solid fa-user-group text-green-500 text-xl w-6"></i> Friends
+                </button>
+                <button id="videos-side-btn" onclick="switchTab('videos')" class="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-gray-200 dark:hover:bg-zinc-800 transition text-left font-semibold">
+                    <i class="fa-solid fa-video text-red-500 text-xl w-6"></i> Videos / Reels
+                </button>
+                <button id="chat-side-btn" onclick="switchTab('chat')" class="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-gray-200 dark:hover:bg-zinc-800 transition text-left font-semibold">
+                    <i class="fa-solid fa-message text-purple-500 text-xl w-6"></i> Live Chat
+                </button>
+                <button id="notifications-side-btn" onclick="switchTab('notifications')" class="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-gray-200 dark:hover:bg-zinc-800 transition text-left font-semibold">
+                    <i class="fa-solid fa-bell text-yellow-500 text-xl w-6"></i> Alerts <span id="alert-badge" class="hidden ml-auto bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">0</span>
+                </button>
+            </aside>
+
+            <main class="flex-1 min-w-0 py-4 md:py-6 px-2 sm:px-4">
+                
+                <div id="home-tab" class="tab-content space-y-6">
+                    <div class="flex gap-3 overflow-x-auto scrollbar-hide py-2 px-1">
+                        <div class="flex flex-col items-center flex-shrink-0 cursor-pointer group" onclick="alert('Story feature coming soon!')">
+                            <div class="w-16 h-16 rounded-full bg-gray-200 dark:bg-zinc-800 border-2 border-dashed border-gray-400 flex items-center justify-center relative group-hover:border-blue-500 transition">
+                                <i class="fa-solid fa-plus text-gray-500 group-hover:text-blue-500"></i>
+                            </div>
+                            <span class="text-xs font-medium mt-1">Add Story</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-zinc-800 rounded-2xl p-4 shadow-sm border border-gray-200 dark:border-zinc-700 space-y-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold" id="post-avatar">U</div>
+                            <input type="text" id="post-text-input" placeholder="What's on your mind?" class="flex-1 bg-gray-100 dark:bg-zinc-900 border border-transparent focus:border-blue-500 px-4 py-2.5 rounded-full text-sm focus:outline-none transition">
+                        </div>
+                        <hr class="border-gray-200 dark:border-zinc-700">
+                        <div class="flex items-center justify-between pt-1">
+                            <label onclick="toggleMediaInput()" class="flex items-center gap-2 text-sm text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-700 py-1.5 px-3 rounded-xl cursor-pointer transition">
+                                <i class="fa-solid fa-image text-green-500 text-base"></i> Photo URL
+                            </label>
+                            <button onclick="toggleMediaInput()" class="flex items-center gap-2 text-sm text-gray-600 dark:text-zinc-400 hover:bg-gray-100 dark:hover:bg-zinc-700 py-1.5 px-3 rounded-xl transition">
+                                <i class="fa-solid fa-video text-red-500 text-base"></i> Video / Reel URL
+                            </button>
+                            <button onclick="createPost()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-1.5 rounded-full text-sm transition shadow-md">Post</button>
+                        </div>
+                        <div id="media-url-inputs" class="hidden bg-gray-50 dark:bg-zinc-900/50 p-3 rounded-xl border border-gray-200 dark:border-zinc-700 space-y-2">
+                            <input type="text" id="extra-image-input" placeholder="Optional Image URL (https://...)" class="w-full text-xs p-2 rounded border bg-white dark:bg-zinc-800">
+                            <input type="text" id="extra-video-input" placeholder="Optional MP4 Video URL (https://...)" class="w-full text-xs p-2 rounded border bg-white dark:bg-zinc-800">
+                        </div>
+                    </div>
+
+                    <div id="posts-container" class="space-y-6">
+                        <div class="text-center py-8 text-gray-500">Loading feeds...</div>
+                    </div>
+                </div>
+
+                <div id="friends-tab" class="tab-content hidden space-y-4">
+                    <h2 class="text-xl font-bold px-1">People on MHBOOK</h2>
+                    <div id="users-list-container" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+                </div>
+
+                <div id="videos-tab" class="tab-content hidden space-y-6">
+                    <h2 class="text-xl font-bold px-1 flex items-center gap-2">
+                        <i class="fa-solid fa-clapperboard text-red-500"></i> MHBOOK Watch / Reels
+                    </h2>
+                    <div id="video-feed" class="space-y-8 max-w-md mx-auto">
+                        <div class="text-center text-gray-500 py-8">No shared videos found.</div>
+                    </div>
+                </div>
+
+                <div id="chat-tab" class="tab-content hidden h-[calc(100vh-140px)] md:h-[calc(100vh-100px)] flex bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-2xl overflow-hidden shadow-sm">
+                    <div class="w-1/3 border-r border-gray-200 dark:border-zinc-700 flex flex-col">
+                        <div class="p-3 font-bold text-sm border-b border-gray-200 dark:border-zinc-700">Conversations</div>
+                        <div id="chat-users-list" class="flex-1 overflow-y-auto divide-y divide-gray-100 dark:divide-zinc-700"></div>
+                    </div>
+                    <div class="flex-1 flex flex-col bg-gray-50 dark:bg-zinc-900/30">
+                        <div id="chat-header-user" class="p-3 bg-white dark:bg-zinc-800 border-b border-gray-200 dark:border-zinc-700 font-bold text-sm text-gray-700 dark:text-zinc-300">
+                            Select a friend to begin chatting
+                        </div>
+                        <div id="chat-messages-box" class="flex-1 p-4 overflow-y-auto space-y-3 flex flex-col w-full"></div>
+                        <div id="chat-input-row" class="p-3 bg-white dark:bg-zinc-800 border-t border-gray-200 dark:border-zinc-700 hidden items-center gap-2">
+                            <input type="text" id="chat-msg-field" placeholder="Write a secure message..." class="flex-1 px-4 py-2 border rounded-full text-sm bg-gray-50 dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-blue-500" onkeydown="if(event.key === 'Enter') sendDirectMessage()">
+                            <button onclick="sendDirectMessage()" class="w-9 h-9 flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white rounded-full transition shadow"><i class="fa-solid fa-paper-plane text-sm"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="notifications-tab" class="tab-content hidden space-y-4">
+                    <h2 class="text-xl font-bold px-1">Alerts / Request Lists</h2>
+                    <div id="notifications-container" class="bg-white dark:bg-zinc-800 rounded-2xl border border-gray-200 dark:border-zinc-700 divide-y divide-gray-100 dark:divide-zinc-700 overflow-hidden shadow-sm">
+                        <div class="p-4 text-center text-sm text-gray-500">Checking for real-time requests...</div>
+                    </div>
+                </div>
+
+                <div id="profile-tab" class="tab-content hidden space-y-6">
+                    <div class="bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-2xl overflow-hidden shadow-sm">
+                        <div class="h-32 bg-gradient-to-r from-blue-400 to-indigo-500"></div>
+                        <div class="px-6 pb-6 relative flex flex-col sm:flex-row items-center sm:items-end gap-4 -mt-12">
+                            <div class="w-24 h-24 rounded-full bg-blue-600 text-white text-3xl font-black border-4 border-white dark:border-zinc-800 flex items-center justify-center shadow-md" id="profile-card-avatar">U</div>
+                            <div class="flex-1 text-center sm:text-left mb-2">
+                                <h2 class="text-2xl font-bold" id="profile-card-name">Display Name</h2>
+                                <p class="text-sm text-gray-500 dark:text-zinc-400" id="profile-card-handle">@username</p>
+                                <p class="text-xs text-gray-400 mt-1" id="profile-card-location"></p>
+                            </div>
+                            <button onclick="alert('Profile edit feature available soon!')" class="bg-gray-100 dark:bg-zinc-700 hover:bg-gray-200 text-sm font-semibold py-2 px-4 rounded-xl transition mb-2">Edit Profile</button>
+                        </div>
+                    </div>
+                    
+                    <h3 class="text-lg font-bold px-1 mt-4">Your Feed Timelines</h3>
+                    <div id="user-profile-posts" class="space-y-6"></div>
+                </div>
+
+            </main>
+        </div>
+
+        <footer class="md:hidden bg-white dark:bg-zinc-800 border-t border-gray-200 dark:border-zinc-700 fixed bottom-0 left-0 right-0 z-40 px-2 py-1 flex justify-around shadow-lg">
+            <button id="home-tab-btn" onclick="switchTab('home')" class="text-blue-600 text-xl w-full pb-1 text-center border-b-2 border-blue-600"><i class="fa-solid fa-house"></i></button>
+            <button id="friends-tab-btn" onclick="switchTab('friends')" class="text-gray-500 w-full text-center text-xl"><i class="fa-solid fa-user-group"></i></button>
+            <button id="videos-tab-btn" onclick="switchTab('videos')" class="text-gray-500 w-full text-center text-xl"><i class="fa-solid fa-video"></i></button>
+            <button id="chat-tab-btn" onclick="switchTab('chat')" class="text-gray-500 w-full text-center text-xl"><i class="fa-solid fa-message"></i></button>
+            <button id="notifications-tab-btn" onclick="switchTab('notifications')" class="text-gray-500 w-full text-center text-xl relative">
+                <i class="fa-solid fa-bell"></i>
+                <span id="alert-badge-mob" class="hidden absolute top-0 right-4 bg-red-500 w-2 h-2 rounded-full"></span>
+            </button>
+            <button id="profile-tab-btn" onclick="switchTab('profile')" class="text-gray-500 w-full text-center text-xl"><i class="fa-solid fa-user"></i></button>
+        </footer>
+    </div>
+
+    <div id="view-profile-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4 animate-fadeIn">
+        <div class="bg-white dark:bg-zinc-800 rounded-2xl w-full max-w-md overflow-hidden relative shadow-2xl">
+            <button onclick="closeProfileModal()" class="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-xl z-10"><i class="fa-solid fa-xmark"></i></button>
+            <div class="h-24 bg-gradient-to-r from-teal-400 to-blue-500"></div>
+            <div class="p-6 pt-0 relative flex flex-col items-center -mt-10 text-center">
+                <div id="modal-user-avatar" class="w-20 h-20 bg-emerald-600 text-white rounded-full font-black text-2xl flex items-center justify-center border-4 border-white dark:border-zinc-800 shadow-md">?</div>
+                <h3 id="modal-user-name" class="text-xl font-bold mt-3">User</h3>
+                <p id="modal-user-username" class="text-xs text-gray-400">@handle</p>
+                <p id="modal-user-location" class="text-xs text-gray-500 font-medium mb-4"></p>
+                <div class="w-full grid grid-cols-2 gap-4 border-t border-b border-gray-100 dark:border-zinc-700 py-3 my-2 text-sm">
+                    <div><span class="block font-bold text-lg text-blue-500" id="modal-posts-count">0</span> Posts</div>
+                    <div><span class="block font-bold text-lg text-green-500">1</span> Friends</div>
+                </div>
+                <button id="modal-friend-btn" onclick="sendFriendRequest()" class="mt-4 bg-blue-600 text-white px-6 py-2 rounded-xl font-semibold hover:bg-blue-700 w-full transition shadow">Add Friend</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAs8W8G89f8A6g_0E3N-X_H9u-H8g8L7Y",
+            authDomain: "mhbook-638.firebaseapp.com",
+            databaseURL: "https://mhbook-638-default-rtdb.firebaseio.com",
+            projectId: "mhbook-638",
+            storageBucket: "mhbook-638.appspot.com",
+            messagingSenderId: "367399283749",
+            appId: "1:367399283749:web:73bcf8e3928a0e3f"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        let currentUser = "";
+        let currentActiveChatRecipient = "";
+        let globalAllUsersPayload = {};
+        let selectedProfileUsername = "";
+        let globalPostsArray = [];
+
+        function getCachedData(key) {
+            const cached = localStorage.getItem(key);
+            return cached ? JSON.parse(cached) : null;
+        }
+
+        function setCachedData(key, data) {
+            localStorage.setItem(key, JSON.stringify(data));
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const rememberedUser = localStorage.getItem("mhbook_user");
+            
+            const cachedPosts = getCachedData("mhbook_posts_cache");
+            if (cachedPosts) {
+                globalPostsArray = cachedPosts;
+                renderPostsHTML(cachedPosts);
+            }
+
+            if (rememberedUser) {
+                currentUser = rememberedUser;
+                bootAppWorkspace();
+            } else {
+                showAuthScreen('login');
+            }
+        });
+
+        function showAuthScreen(type) {
+            document.getElementById('auth-screen').classList.remove('hidden');
+            document.getElementById('main-app').classList.add('hidden');
+            if (type === 'login') {
+                document.getElementById('login-form').classList.remove('hidden');
+                document.getElementById('register-form').classList.add('hidden');
+            } else {
+                document.getElementById('login-form').classList.add('hidden');
+                document.getElementById('register-form').classList.remove('hidden');
+            }
+        }
+
+        function handleRegister() {
+            const name = document.getElementById('reg-name').value.trim();
+            const username = document.getElementById('reg-username').value.trim().toLowerCase();
+            const contact = document.getElementById('reg-contact').value.trim();
+            const country = document.getElementById('reg-country').value.trim();
+            const city = document.getElementById('reg-city').value.trim();
+            const password = document.getElementById('reg-password').value.trim();
+
+            if (!name || !username || !contact || !country || !city || !password) { 
+                alert('Please fill in all configuration fields!'); 
+                return; 
+            }
+
+            database.ref('users/' + username).once('value', snapshot => {
+                if (snapshot.exists()) {
+                    alert('Username already taken! Choose another one.');
+                } else {
+                    database.ref('users/' + username).set({
+                        name: name,
+                        username: username,
+                        contact: contact,
+                        country: country,
+                        city: city,
+                        password: password,
+                        registeredAt: Date.now()
+                    }).then(() => {
+                        alert('Registration complete! Logging you in...');
+                        currentUser = username;
+                        localStorage.setItem("mhbook_user", username);
+                        bootAppWorkspace();
+                    }).catch(error => {
+                        alert("Registration failed: " + error.message);
+                    });
+                }
+            });
+        }
+
+        function handleLogin() {
+            const username = document.getElementById('login-username').value.trim().toLowerCase();
+            const password = document.getElementById('login-password').value.trim();
+
+            if (!username || !password) { alert('Please enter valid credentials!'); return; }
+
+            database.ref('users/' + username).once('value', snapshot => {
+                if (snapshot.exists() && snapshot.val().password === password) {
+                    currentUser = username;
+                    localStorage.setItem("mhbook_user", username);
+                    bootAppWorkspace();
+                } else {
+                    alert('Invalid username or password!');
+                }
+            });
+        }
+
+        function bootAppWorkspace() {
+            document.getElementById('auth-screen').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('hidden');
+            
+            database.ref('users/' + currentUser).once('value', snapshot => {
+                if(snapshot.exists()) {
+                    const data = snapshot.val();
+                    document.getElementById('nav-username').innerText = data.name;
+                    document.getElementById('nav-avatar').innerText = data.name.charAt(0).toUpperCase();
+                    document.getElementById('post-avatar').innerText = data.name.charAt(0).toUpperCase();
+                    document.getElementById('profile-card-avatar').innerText = data.name.charAt(0).toUpperCase();
+                    document.getElementById('profile-card-name').innerText = data.name;
+                    document.getElementById('profile-card-handle').innerText = '@' + data.username;
+                    document.getElementById('profile-card-location').innerText = `📍 ${data.city || 'City'}, ${data.country || 'Country'}`;
+                }
+            });
+
+            listenToPosts();
+            listenToUsers();
+            listenToNotifications();
+        }
+
+        function toggleMediaInput() {
+            const box = document.getElementById('media-url-inputs');
+            box.classList.toggle('hidden');
+        }
+
+        function createPost() {
+            const txt = document.getElementById('post-text-input').value.trim();
+            const imgUrl = document.getElementById('extra-image-input').value.trim();
+            const vidUrl = document.getElementById('extra-video-input').value.trim();
+
+            if (!txt && !imgUrl && !vidUrl) { alert('Post container cannot be blank!'); return; }
+
+            database.ref('users/' + currentUser).once('value', snapshot => {
+                const authorName = snapshot.exists() ? snapshot.val().name : currentUser;
+                const newPostRef = database.ref('posts/').push();
+                
+                newPostRef.set({
+                    id: newPostRef.key,
+                    authorUsername: currentUser,
+                    authorName: authorName,
+                    text: txt,
+                    image: imgUrl,
+                    video: vidUrl,
+                    timestamp: Date.now(),
+                    likes: {},
+                    likesCount: 0
+                }).then(() => {
+                    document.getElementById('post-text-input').value = "";
+                    document.getElementById('extra-image-input').value = "";
+                    document.getElementById('extra-video-input').value = "";
+                    document.getElementById('media-url-inputs').classList.add('hidden');
+                });
+            });
+        }
+
+        function listenToPosts() {
+            database.ref('posts/').orderByChild('timestamp').on('value', snapshot => {
+                let postList = [];
+                if (snapshot.exists()) {
+                    snapshot.forEach(child => { postList.push(child.val()); });
+                    postList.reverse();
+                }
+                globalPostsArray = postList;
+                setCachedData("mhbook_posts_cache", postList);
+                renderPostsHTML(postList);
+            });
+        }
+
+        function renderPostsHTML(postList) {
+            const container = document.getElementById('posts-container');
+            const profileContainer = document.getElementById('user-profile-posts');
+            const videoFeed = document.getElementById('video-feed');
+            
+            if (postList.length === 0) {
+                if(container) container.innerHTML = `<div class="text-center py-8 text-gray-400 text-sm">No stories inside feed yet.</div>`;
+                return;
+            }
+
+            let videoFeedHTML = "";
+            let feedHTML = "";
+            let profileHTML = "";
+
+            postList.forEach(post => {
+                const hasLiked = post.likes && post.likes[currentUser] ? true : false;
+                const likeIconClass = hasLiked ? "fa-solid fa-heart text-red-500 scale-110" : "fa-regular fa-heart";
+                
+                let mediaMarkup = "";
+                if (post.image) {
+                    mediaMarkup += `<img src="${post.image}" class="w-full max-h-96 object-cover rounded-xl mt-2 border border-gray-100 dark:border-zinc-700" onerror="this.style.display='none'">`;
+                }
+                if (post.video) {
+                    mediaMarkup += `
+                        <div class="relative rounded-xl overflow-hidden mt-2 bg-black border border-gray-100 dark:border-zinc-700">
+                            <video src="${post.video}" controls class="w-full max-h-96" playsinline></video>
+                        </div>`;
+                }
+
+                let commentsBoxHTML = "";
+                if (post.comments) {
+                    Object.values(post.comments).forEach(c => {
+                        commentsBoxHTML += `
+                            <div class="bg-gray-50 dark:bg-zinc-900/60 p-2.5 rounded-2xl text-xs">
+                                <span class="font-bold cursor-pointer hover:underline text-gray-800 dark:text-zinc-200" onclick="viewUserProfile('${c.username}')">${c.name}</span>
+                                <p class="text-gray-600 dark:text-zinc-400 mt-0.5">${c.text}</p>
+                            </div>`;
+                    });
+                }
+
+                const template = `
+                    <div class="bg-white dark:bg-zinc-800 rounded-2xl p-4 shadow-sm border border-gray-200 dark:border-zinc-700 space-y-3 transition-all">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3 cursor-pointer" onclick="viewUserProfile('${post.authorUsername}')">
+                                <div class="w-9 h-9 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm">${post.authorName ? post.authorName.charAt(0).toUpperCase() : 'U'}</div>
+                                <div>
+                                    <h4 class="font-bold text-sm hover:underline">${post.authorName || 'User'}</h4>
+                                    <span class="text-[10px] text-gray-400 block">${new Date(post.timestamp).toLocaleString()}</span>
+                                </div>
+                            </div>
+                            <button class="text-gray-400 hover:text-gray-600" onclick="alert('Link copied!')"><i class="fa-solid fa-share-nodes"></i></button>
+                        </div>
+                        ${post.text ? `<p class="text-sm leading-relaxed">${post.text}</p>` : ''}
+                        ${mediaMarkup}
+                        <hr class="border-gray-100 dark:border-zinc-700 my-1">
+                        <div class="flex items-center justify-around text-xs font-semibold text-gray-500 dark:text-zinc-400">
+                            <button onclick="toggleLikePost('${post.id}')" class="flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-zinc-700/50 py-2 px-4 rounded-xl transition">
+                                <i class="${likeIconClass}"></i> Like (${post.likesCount || 0})
+                            </button>
+                            <button onclick="document.getElementById('comment-input-box-${post.id}').focus()" class="flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-zinc-700/50 py-2 px-4 rounded-xl transition">
+                                <i class="fa-regular fa-comment"></i> Comment
+                            </button>
+                        </div>
+                        <hr class="border-gray-100 dark:border-zinc-700 my-1">
+                        <div class="space-y-2 max-h-48 overflow-y-auto mt-2 scrollbar-hide">
+                            ${commentsBoxHTML}
+                        </div>
+                        <div class="flex items-center gap-2 mt-2">
+                            <input type="text" id="comment-input-box-${post.id}" placeholder="Write a comment..." class="bg-gray-100 dark:bg-zinc-900 text-xs px-3 py-2 rounded-full flex-1 focus:outline-none focus:ring-1 focus:ring-blue-500" onkeydown="if(event.key === 'Enter') submitCommentLine('${post.id}')">
+                            <button onclick="submitCommentLine('${post.id}')" class="text-blue-500 text-xs font-bold px-2 hover:text-blue-600">Send</button>
+                        </div>
+                    </div>`;
+
+                feedHTML += template;
+                if (post.authorUsername === currentUser) profileHTML += template;
+                if (post.video) {
+                    videoFeedHTML += `
+                        <div class="bg-white dark:bg-zinc-800 rounded-2xl shadow-sm overflow-hidden border border-gray-200 dark:border-zinc-700">
+                            <div class="p-3 flex items-center gap-2">
+                                <div class="w-7 h-7 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">${post.authorName ? post.authorName.charAt(0).toUpperCase() : 'U'}</div>
+                                <span class="text-xs font-bold">${post.authorName}</span>
+                            </div>
+                            <video src="${post.video}" controls class="w-full aspect-video bg-black" loop></video>
+                            <div class="p-3"><p class="text-xs text-gray-700 dark:text-zinc-300 font-medium">${post.text || 'Shared Reel'}</p></div>
+                        </div>`;
+                }
+            });
+
+            if(container) container.innerHTML = feedHTML;
+            if(profileContainer) profileContainer.innerHTML = profileHTML || `<div class="text-center py-6 text-xs text-gray-400">You haven't posted anything yet.</div>`;
+            if(videoFeed) videoFeed.innerHTML = videoFeedHTML || `<div class="text-center text-gray-500 py-8">No shared videos found.</div>`;
+        }
+
+        function toggleLikePost(postId) {
+            const postRef = database.ref('posts/' + postId);
+            postRef.once('value', snapshot => {
+                if (snapshot.exists()) {
+                    const post = snapshot.val();
+                    let likes = post.likes || {};
+                    let count = post.likesCount || 0;
+
+                    if (likes[currentUser]) {
+                        delete likes[currentUser];
+                        count--;
+                    } else {
+                        likes[currentUser] = true;
+                        count++;
+                    }
+                    postRef.update({ likes: likes, likesCount: count });
+                }
+            });
+        }
+
+        function submitCommentLine(postId) {
+            const field = document.getElementById(`comment-input-box-${postId}`);
+            const text = field.value.trim();
+            if(!text) return;
+
+            database.ref('users/' + currentUser).once('value', userSnapshot => {
+                if(userSnapshot.exists()) {
+                    const name = userSnapshot.val().name;
+                    const commentRef = database.ref(`posts/${postId}/comments`).push();
+                    commentRef.set({
+                        id: commentRef.key,
+                        username: currentUser,
+                        name: name,
+                        text: text,
+                        timestamp: Date.now()
+                    }).then(() => { field.value = ""; });
+                }
+            });
+        }
+
+        function listenToUsers() {
+            database.ref('users/').on('value', snapshot => {
+                const container = document.getElementById('users-list-container');
+                const chatUsersList = document.getElementById('chat-users-list');
+                
+                if(container) container.innerHTML = "";
+                if(chatUsersList) chatUsersList.innerHTML = "";
+                
+                if (!snapshot.exists()) return;
+                globalAllUsersPayload = snapshot.val();
+
+                Object.values(snapshot.val()).forEach(user => {
+                    if (user.username === currentUser) return;
+
+                    if(container) {
+                        container.innerHTML += `
+                            <div class="bg-white dark:bg-zinc-800 p-4 rounded-2xl flex items-center justify-between border border-gray-200 dark:border-zinc-700 shadow-sm">
+                                <div class="flex items-center gap-3 cursor-pointer" onclick="viewUserProfile('${user.username}')">
+                                    <div class="w-11 h-11 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 text-white font-bold flex items-center justify-center text-base">${user.name.charAt(0).toUpperCase()}</div>
+                                    <div>
+                                        <h4 class="font-bold text-sm hover:underline">${user.name}</h4>
+                                        <span class="text-xs text-gray-400 block">📍 ${user.city || 'City'}, ${user.country || 'Country'}</span>
+                                    </div>
+                                </div>
+                                <button onclick="openDirectChatSession('${user.username}')" class="bg-blue-50 text-blue-600 dark:bg-zinc-700 dark:text-zinc-200 hover:bg-blue-100 text-xs font-bold px-4 py-2 rounded-xl transition">Message</button>
+                            </div>`;
+                    }
+
+                    if(chatUsersList) {
+                        chatUsersList.innerHTML += `
+                            <div onclick="openDirectChatSession('${user.username}')" class="p-3 flex items-center gap-3 hover:bg-gray-100 dark:hover:bg-zinc-700/50 cursor-pointer transition">
+                                <div class="w-8 h-8 rounded-full bg-zinc-600 text-white text-xs font-bold flex items-center justify-center">${user.name.charAt(0).toUpperCase()}</div>
+                                <div class="flex-1 min-w-0">
+                                    <span class="text-xs font-bold block truncate text-gray-800 dark:text-zinc-200">${user.name}</span>
+                                    <span class="text-[10px] text-gray-400 block truncate">Click to chat</span>
+                                </div>
+                            </div>`;
+                    }
+                });
+            });
+        }
+
+        function viewUserProfile(username) {
+            const user = globalAllUsersPayload[username];
+            if(!user) return;
+            
+            selectedProfileUsername = username;
+
+            document.getElementById('modal-user-avatar').innerText = user.name.charAt(0).toUpperCase();
+            document.getElementById('modal-user-name').innerText = user.name;
+            document.getElementById('modal-user-username').innerText = '@' + user.username;
+            document.getElementById('modal-user-location').innerText = `📍 ${user.city || 'City'}, ${user.country || 'Country'}`;
+            
+            const uPosts = globalPostsArray.filter(p => p.authorUsername === username).length;
+            document.getElementById('modal-posts-count').innerText = uPosts;
+
+            const btn = document.getElementById('modal-friend-btn');
+            if(username === currentUser) {
+                btn.classList.add('hidden');
+            } else {
+                btn.classList.remove('hidden');
+            }
+            
+            const modal = document.getElementById('view-profile-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeProfileModal() {
+            selectedProfileUsername = "";
+            const modal = document.getElementById('view-profile-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function sendFriendRequest() {
+            if (!selectedProfileUsername || selectedProfileUsername === currentUser) return;
+
+            database.ref('users/' + currentUser).once('value', snapshot => {
+                const senderName = snapshot.exists() ? snapshot.val().name : currentUser;
+                
+                // Notifications database-e request dynamic pathano hochhe
+                const notifRef = database.ref('notifications/' + selectedProfileUsername).push();
+                notifRef.set({
+                    id: notifRef.key,
+                    type: "friend_request",
+                    senderUsername: currentUser,
+                    senderName: senderName,
+                    message: `${senderName} sent you a friend request.`,
+                    timestamp: Date.now()
+                }).then(() => {
+                    alert('Friend Request Transmitted Successfully!');
+                    closeProfileModal();
+                }).catch(err => {
+                    alert('Failed to send request: ' + err.message);
+                });
+            });
+        }
+
+        function listenToNotifications() {
+            database.ref('notifications/' + currentUser).orderByChild('timestamp').on('value', snapshot => {
+                const container = document.getElementById('notifications-container');
+                const badge = document.getElementById('alert-badge');
+                const badgeMob = document.getElementById('alert-badge-mob');
+                
+                if (!container) return;
+                container.innerHTML = "";
+
+                if (!snapshot.exists()) {
+                    container.innerHTML = `
+                        <div class="p-4 text-center text-sm text-gray-500">
+                            No new alerts found.
+                        </div>`;
+                    if(badge) badge.classList.add('hidden');
+                    if(badgeMob) badgeMob.classList.add('hidden');
+                    return;
+                }
+
+                let count = 0;
+                let htmlContent = "";
+
+                snapshot.forEach(child => {
+                    const notif = child.val();
+                    count++;
+                    htmlContent += `
+                        <div class="p-4 flex items-center justify-between gap-3 hover:bg-gray-50 dark:hover:bg-zinc-700/50 transition animate-fadeIn">
+                            <div class="flex items-center gap-3">
+                                <div class="w-9 h-9 rounded-full bg-blue-100 dark:bg-blue-950 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                                    <i class="fa-solid fa-user-plus"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-semibold text-gray-800 dark:text-zinc-200">${notif.message}</p>
+                                    <span class="text-[10px] text-gray-400 block">${new Date(notif.timestamp).toLocaleString()}</span>
+                                </div>
+                            </div>
+                            <button onclick="deleteNotification('${notif.id}')" class="text-gray-400 hover:text-red-500 transition p-2">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>`;
+                });
+
+                container.innerHTML = htmlContent;
+
+                // Badges updating dynamically
+                if(count > 0) {
+                    if(badge) { badge.innerText = count; badge.classList.remove('hidden'); }
+                    if(badgeMob) badgeMob.classList.remove('hidden');
+                }
+            });
+        }
+
+        function deleteNotification(notifId) {
+            database.ref(`notifications/${currentUser}/${notifId}`).remove();
+        }
+
+        function openDirectChatSession(targetUsername) {
+            currentActiveChatRecipient = targetUsername;
+            switchTab('chat');
+            
+            const userData = globalAllUsersPayload[targetUsername];
+            if(userData) {
+                document.getElementById('chat-header-user').innerText = `Secure Session: ${userData.name}`;
+            }
+            document.getElementById('chat-input-row').classList.remove('hidden');
+            document.getElementById('chat-input-row').classList.add('flex');
+            
+            listenToChatMessages();
+        }
+
+        function sendDirectMessage() {
+            const field = document.getElementById('chat-msg-field');
+            const txt = field.value.trim();
+            if(!txt || !currentActiveChatRecipient) return;
+
+            const chatRoomId = getDeterministicChatId(currentUser, currentActiveChatRecipient);
+            const msgRef = database.ref(`chats/${chatRoomId}`).push();
+            
+            msgRef.set({
+                id: msgRef.key,
+                sender: currentUser,
+                text: txt,
+                timestamp: Date.now()
+            }).then(() => {
+                field.value = "";
+            });
+        }
+
+        function listenToChatMessages() {
+            if(!currentActiveChatRecipient) return;
+            const chatRoomId = getDeterministicChatId(currentUser, currentActiveChatRecipient);
+            
+            database.ref(`chats/${chatRoomId}`).orderByChild('timestamp').on('value', snapshot => {
+                const msgBox = document.getElementById('chat-messages-box');
+                if(!msgBox) return;
+                msgBox.innerHTML = "";
+                
+                if(!snapshot.exists()) {
+                    msgBox.innerHTML = `<div class="text-center text-gray-400 text-xs my-auto">No encrypted logs found.</div>`;
+                    return;
+                }
+
+                snapshot.forEach(child => {
+                    const msg = child.val();
+                    const isSelf = msg.sender === currentUser;
+                    
+                    const outerAlignStyle = isSelf ? "justify-end text-right self-end" : "justify-start text-left self-start";
+                    const innerBubbleStyle = isSelf ? "bg-blue-600 text-white rounded-br-none" : "bg-white dark:bg-zinc-800 text-gray-800 dark:text-zinc-100 rounded-bl-none border border-gray-200 dark:border-zinc-700";
+                    
+                    msgBox.innerHTML += `
+                        <div class="max-w-[75%] flex flex-col ${outerAlignStyle} msg-bubble transform hover:scale-[1.01] my-1">
+                            <div class="p-2.5 rounded-2xl text-xs font-medium shadow-sm ${innerBubbleStyle}">
+                                ${msg.text}
+                            </div>
+                            <span class="text-[8px] text-gray-400 mt-0.5 px-1 block">${new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                        </div>`;
+                });
+                
+                msgBox.scrollTo({ top: msgBox.scrollHeight, behavior: 'smooth' });
+            });
+        }
+
+        function getDeterministicChatId(u1, u2) {
+            return u1 < u2 ? `${u1}_and_${u2}` : `${u2}_and_${u1}`;
+        }
+
+        function handleLogout() {
+            currentUser = "";
+            localStorage.removeItem("mhbook_user");
+            document.getElementById('main-app').classList.add('hidden');
+            showAuthScreen('login');
+        }
+
+        function toggleDarkMode() {
+            const html = document.documentElement;
+            const icon = document.getElementById('dark-icon');
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                icon.className = "fa-solid fa-moon text-gray-700";
+            } else {
+                html.classList.add('dark');
+                icon.className = "fa-solid fa-sun text-yellow-400";
+            }
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
+            const tabs = ['home', 'friends', 'videos', 'chat', 'notifications', 'profile'];
+            tabs.forEach(t => {
+                const btn = document.getElementById(`${t}-tab-btn`);
+                const sideBtn = document.getElementById(`${t}-side-btn`);
+                if(btn) btn.className = "text-gray-500 w-full text-center text-xl";
+                if(sideBtn) sideBtn.className = "flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-gray-200 dark:hover:bg-zinc-800 transition text-left font-semibold";
+            });
+
+            document.getElementById(`${tabName}-tab`).classList.remove('hidden');
+            
+            const activeBtn = document.getElementById(`${tabName}-tab-btn`);
+            const activeSideBtn = document.getElementById(`${tabName}-side-btn`);
+            if(activeBtn) activeBtn.className = "text-blue-600 text-xl w-full pb-1 text-center border-b-2 border-blue-600";
+            if(activeSideBtn) activeSideBtn.className = "flex items-center gap-4 px-4 py-3 rounded-xl bg-blue-50 dark:bg-zinc-800/80 text-blue-600 text-left font-bold transition";
+            
+            if (tabName !== 'videos') {
+                document.querySelectorAll('#video-feed video').forEach(v => v.pause());
+            }
+        }
+    </script>
+</body>
+</html>
